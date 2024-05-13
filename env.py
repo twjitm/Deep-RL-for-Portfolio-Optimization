@@ -53,8 +53,8 @@ class Environment:
                          - if Int, use a random state (useful to compare different
                            experimental results).
         lambd          : Float, penalty term of the position in the reward function.
-        psi            : Float, penalty term of the trade magnitude in the reward
-                         function.
+        psi            : Float, penalty term of the trade magnitude in the reward #
+                         function. 
         cost           : String in ['trade_0', 'trade_l1', 'trade_l2']
                           - 'trade_0'  : no trading cost.
                           - 'trade_l1' : squared trading cost.
