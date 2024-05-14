@@ -263,6 +263,7 @@ n_episodes = 10 #
 rng = np.random.RandomState(random_state)
 #random_stats:随机种子
 random_states = rng.randint(0, int(1e6), size=n_episodes)
+#positions_opt :最优持仓
 score, score_episode, scores_cumsum_opt, pnls_opt, positions_opt = env.test_apply(# 运行测试模型
     total_episodes=n_episodes, random_states=random_states, lambd=lambd_max, psi=psi_max
 )
@@ -282,10 +283,10 @@ plt.figure(figsize=(15, 6)) #绘制图像
 plt.subplot(1, 2, 1)
 plt.plot(positions[110][730001], label="DDPG", color="g")
 plt.plot(positions_opt[730001], label="OPT", color="r")
-plt.plot(env.signal[1:], label="signal$", color="y")
-plt.xlim(300, 600)
-plt.xlabel(r"$t$", fontsize=15)
-plt.ylabel(r"$p_t, \pi_t$", fontsize=15)
+plt.plot(env.signal[1:], label="signal$", color="y")#env.signal[1:]在智能体训练过程中的，最优解的预测值
+plt.xlim(300, 600) #x轴范围，表示持仓的股的索引
+plt.xlabel(r"$t$", fontsize=15) 
+plt.ylabel(r"$p_t, \pi_t$", fontsize=15) #表示持仓数量
 plt.legend()
 
 plt.subplot(1, 2, 2)

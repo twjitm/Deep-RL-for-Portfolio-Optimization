@@ -93,7 +93,7 @@ class Environment:
         self.psi = psi
         self.cost = cost
         self.max_pos = max_pos
-        self.squared_risk = squared_risk
+        self.squared_risk = squared_risk #是否使用平方风险项
         self.random_state = random_state
         self.signal = build_ou_process(T, sigma, theta, random_state)
         self.it = 0  # First iteration is 0
@@ -348,12 +348,13 @@ class Environment:
             positions,
         )
 
+##apply()函数的作用：根据当前状态，返回一个动作，这个动作是根据当前状态和阈值来决定的。
     def apply(self, state, thresh=1, lambd=None, psi=None):
         """
         Description
         ---------------
         Apply solution with a certain band and slope outside the band, otherwise apply the
-        myopic solution.
+        myopic solution. 
 
         Parameters
         ---------------
@@ -411,6 +412,8 @@ class Environment:
         """
         Description
         ---------------
+        # test_apply 函数的作用：为每个奖励模型测试具有特定斜率和带宽的函数
+        （带交易成本和不带交易成本，以及在使用交易成本时取决于惩罚的情况）。
         Test a function with certain slope and band width for each reward model (with and
         without trading cost, and depending on the penalty when trading cost is used).
         When psi and lambd are not provided, use the myopic solution.

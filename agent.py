@@ -245,8 +245,8 @@ class Agent:
         self.noise = OUNoise(theta=theta, sigma=sigma) #初始化OU噪声，主要用于探索数据的特征
 
         # Actor Networks initialized to None
-        self.actor_local = None #初始化actor_local 为None
-        self.actor_target = None #初始化actor_target 为None
+        self.actor_local = None #初始化actor_local 为None， actor_local的作用是用于生成动作。
+        self.actor_target = None #初始化actor_target 为None ，actor_target的作用是用于生成目标动作。
 
         # Critic Networks initialized to None
         self.critic_local = None #初始化critic_local 为None
@@ -337,9 +337,9 @@ class Agent:
                               - state[0]: pi, the current position.
                               - state[1]: p, the next value of the signal.
         noise               : Boolean, whether to add exploratory noise or not.
-        explore_probability : Float, decaying parameter that controls the noise magnitude.
+        explore_probability : Float, decaying parameter that controls the noise magnitude.#探索概率，用于控制噪声的大小。
         truncate            : Boolean, truncate the noise sample such that the position
-                              remains between -MaxPos and MaxPos.
+                              remains between -MaxPos and MaxPos. #截断噪声样本，使持仓量保持在-MaxPos和MaxPos之间。
         max_pos             : Float > 0, truncate the positions between -MaxPos and
                               MaxPos.
 
@@ -434,8 +434,11 @@ class Agent:
                     #如通知完成，重置环境
                     env.reset()
 
-#train函数，本函数是训练智能体的主要函数，包括训练Actor和Critic网络、更新目标网络、保存模型权重等功能。
+    #train函数，本函数是训练智能体的主要函数，包括训练Actor和Critic网络、更新目标网络、保存模型权重等功能。
     #主要参数包括环境对象、总训练次数、Actor和Critic的超参数、预训练步数、模型权重保存路径、训练频率、是否绘制图表等。
+    #参数 pi、lambd、psi 和 thresh 用于绘制函数图形。
+    #train 函数比较复杂，主要是因为 DDPG 算法的训练过程比较复杂，包括经验回放、优先级经验回放、OU 噪声、Actor 和 Critic 网络的初始化、训练等功能。
+    #解读train函数的关键是理解 DDPG 算法的训练过程，以及 Actor 和 Critic 网络的初始化、训练等功能。
     def train(
         self,
         env,
@@ -456,15 +459,15 @@ class Agent:
         decay_rate=DECAY_RATE,
         explore_stop=EXPLORE_STOP,
         tensordir="runs/",
-        learn_freq=50,
+        learn_freq=50,#learn_freq 为每次（number_steps%learn_freq == 0）时，我们进行一次训练步骤。
         plots=False,
-        pi=0.5,
-        lambd=None,
-        psi=None,
+        pi=0.5,#pi 的作用是绘制函数图形时使用的参数。
+        lambd=None,#lambd的作用是控制成本模型的强度。在成本模型中，lambd 越大，成本的影响越大。
+        psi=None,#psi 的作用是控制交易成本的强度。在交易成本模型中，psi 越大，交易成本的影响越大。
         phi=None,
         thresh=3,
         mile=50,
-        progress="tqdm_notebook",
+        progress="tqdm_notebook", #progress 的作用是控制训练过程中的进度条显示。
     ):
         """
         Description
@@ -474,19 +477,19 @@ class Agent:
         Parameters
         -------------
         env                 : Environment object, it serves as the training environment
-                              for the agent.
-        total_episodes      : Int, total number of training episodes.
-        tau_actor           : 0 < Float < 1, soft update parameter of the actor.
-        tau_critic          : 0 < Float < 1, soft update parameter of the critic.
+                              for the agent.#evn 为环境对象，用作智能体的训练环境。
+        total_episodes      : Int, total number of training episodes.#total_episodes 为总训练次数。
+        tau_actor           : 0 < Float < 1, soft update parameter of the actor.#tau_actor 为 Actor 的软更新参数。
+        tau_critic          : 0 < Float < 1, soft update parameter of the critic.#tau_critic 为 Critic 的软更新参数。
         lr_actor            : Float, learning rate of the actor network.
         lr_critic           : Float, learning rate of the critic network.
-        weight_decay_actor  : Float, L2 weight decay of the actor network.
-        weight_decay_critic : Float, L2 weight decay of the critic network.
+        weight_decay_actor  : Float, L2 weight decay of the actor network.#weight_decay_actor 为 Actor 网络的 L2 权重衰减。
+        weight_decay_critic : Float, L2 weight decay of the critic network.#weight_decay_critic 为 Critic 网络的 L2 权重衰减。
         total_steps         : Int, number of pretraining steps (must be greater than
-                              BATCH_SIZE).
+                              BATCH_SIZE).#total_steps 为预训练步数，指在开始正式训练之前的预先训练步数。这些步骤用于填充回放缓冲区，并确保足够的数据可供训练。
         weights             : String, path to the repository where to save the models'
-                              weights.
-        freq                : Int, number of episodes between two saved models.
+                              weights.#weights 为保存模型权重的路径。
+        freq                : Int, number of episodes between two saved models.#freq 为两个保存模型之间的总训练次数。
         fc1_units_actor     : Int, number of nodes in the first hidden layer of the actor
                               network.
         fc2_units_actor     : Int, number of nodes in the second hidden layer of the actor
@@ -495,25 +498,25 @@ class Agent:
                               network.
         fc2_units_critic    : Int, number of nodes in the second hidden layer of the
                               critic network.
-        decay_rate          : Float, the decay rate of exploration noise.
-        explore_stop        : Float, the final exploration noise magnitude.
-        tensordir           : String, path to write tensorboard scalars.
-        learn_freq          : Int, each time (number_steps%learn_freq == 0), we make a
+        decay_rate          : Float, the decay rate of exploration noise.#decay_rate 为探索噪声的衰减率。
+        explore_stop        : Float, the final exploration noise magnitude.#explore_stop 为探索噪声的最终值。
+        tensordir           : String, path to write tensorboard scalars.#tensordir 为写入 tensorboard 标量的路径。
+        learn_freq          : Int, each time (number_steps%learn_freq == 0), we make a#learn_freq 为每次（number_steps%learn_freq == 0）时，我们进行一次训练步骤。
                               training step.
         plots               : Boolean, whether to plot the shape of the function at the
-                              end of each episode or not.
+                              end of each episode or not.#plots 为是否在每个回合结束时绘制函数形状的标志。
         pi                  : Float, only used when plots is True. The plot is done by
-                              fixing pi and moving p between -4 and 4.
-        lambd               : Float or None, only used when plots is True. The lambda
+                              fixing pi and moving p between -4 and 4.#pi 为绘制函数图形时使用的参数。
+        lambd               : Float or None, only used when plots is True. The lambda #lambd 为绘制函数图形时使用的参数。
                               parameter of the function to plot against the models.
-                              If None, lambd will be the lambd parameter of the
+                              If None, lambd will be the lambd parameter of the #如果为None，则lambd将是环境 env 的 lambd 参数。
                               environment env.
         psi                 : Float or None, only used when plots is True. The psi
                               parameter of the function to plot against the models.
                               If None, lambd will be the lambd parameter of the
-                              environment env.
+                              environment env.#如果为None，则psi将是环境 env 的 psi 参数。
         thresh              : Float > 0, threshold of the solution in the infinite horizon
-                              case.
+                              case.#thresh 为无限时间情况下解的阈值。
 
         Returns
         -------------
@@ -521,52 +524,63 @@ class Agent:
 
         # Creare folder where to store the Actor weights.
         if not os.path.isdir(weights):
-            os.mkdir(weights)
+            os.mkdir(weights)#创建文件夹
 
-        # Set the summary writer of tensorboard
-        writer = SummaryWriter(log_dir=tensordir)
+        # Set the summary writer of tensorboard #设置tensorboard的摘要写入器
+        writer = SummaryWriter(log_dir=tensordir)#设置tensorboard的摘要写入器
 
-        if plots:
+        if plots:#如果绘制图形
+            #这段代码的作用：绘制函数图形，用于可视化不同成本模型的函数形状。
             _ = plt.figure(figsize=(15, 10))
             range_values = np.arange(-4, 4, 0.01)
+            #signal_zeros 的意义是下一个信号值为 0 的情况
             signal_zeros = torch.tensor(
+                #创建张量vstack()函数是将两个数组按垂直方向叠加在一起
                 np.vstack((range_values, np.zeros(len(range_values)))).T,
                 dtype=torch.float,
             )
+            #signal_ones_pos 的意义是下一个信号值为 0.5 的情况
             signal_ones_pos = torch.tensor(
                 np.vstack((range_values, 0.5 * np.ones(len(range_values)))).T,
                 dtype=torch.float,
             )
+            #signal_ones_neg 的意义是下一个信号值为 -0.5 的情况
             signal_ones_neg = torch.tensor(
                 np.vstack((range_values, -0.5 * np.ones(len(range_values)))).T,
                 dtype=torch.float,
             )
             if psi is None:
-                psi = env.psi
+                psi = env.psi#如果psi为None，则psi将是环境 env 的 psi 参数。
 
             if lambd is None:
-                lambd = env.lambd
+                lambd = env.lambd#如果lambd为None，则lambd将是环境 env 的 lambd 参数。
 
-            if env.squared_risk:
-                result1 = optimal_f_vec(
+            if env.squared_risk:#如果是squared_risk squared_risk 的意义是使用平方风险模型。
+                #result1 的意义是交易成本为 0 的情况
+                result1 = optimal_f_vec(#计算最优解的函数，用于计算交易成本为0、l2和l1的成本模型。
                     signal_ones_neg[:, 0].numpy(),
                     -pi,
                     lambd=lambd,
                     psi=psi,
                     cost=env.cost,
                 )
+                #result2 的意义是交易成本为 l2 的情况
                 result2 = optimal_f_vec(
                     signal_zeros[:, 0].numpy(), 0, lambd=lambd, psi=psi, cost=env.cost
                 )
+                #result3 的意义是交易成本为 l1 的情况
                 result3 = optimal_f_vec(
+                    #numpy()函数是将张量转换为 numpy 数组
                     signal_ones_pos[:, 0].numpy(),
                     pi,
                     lambd=lambd,
                     psi=psi,
                     cost=env.cost,
                 )
+ ### 注意！！！！！ optimal_max_pos_vec 和 optimal_f_vec 的区别在于，前者是计算最大持仓量，后者是计算交易量。
 
-            else:
+            else:#如果不是squared_risk 
+                #result1 的意义是交易成本为 0 的情况
                 result1 = optimal_max_pos_vec(
                     signal_ones_neg[:, 0].numpy(), -pi, thresh, env.max_pos
                 )
@@ -578,35 +592,40 @@ class Agent:
                 )
 
         # Define Actor local and target networks
-        self.actor_local = Actor(
+        self.actor_local = Actor( #定义一个Actor网络，用于生成动作，什么是动作呢？动作就是下一个持仓量。
             env.state_size, fc1_units=fc1_units_actor, fc2_units=fc2_units_actor
         )
-        self.actor_target = Actor(
+        self.actor_target = Actor(#定义一个target Actor网络，用于生成目标动作。目标动作是下一个持仓量。
             env.state_size, fc1_units=fc1_units_actor, fc2_units=fc2_units_actor
         )
 
         # Define the optimizer and its learning rate scheduler for the Actor networks
-        actor_optimizer = optim.Adam(
+        actor_optimizer = optim.Adam(#定义一个优化器，主要用来优化Actor网络，optim.Adam的主要作用是优化神经网络的参数。
             self.actor_local.parameters(), lr=lr_actor, weight_decay=weight_decay_actor
         )
-        actor_lr_scheduler = lr_scheduler.StepLR(
+        actor_lr_scheduler = lr_scheduler.StepLR(#定义一个学习率调度器，主要用来调整学习率。
+            # lr_scheduler.StepLR的主要作用是每隔一定步数调整学习率。
             actor_optimizer, step_size=mile * 100, gamma=0.5
         )
+        
+        ###注意这个地方的 local 和target 的区别是，local 的作用是用于生成动作，target 的作用是用于生成目标动作。
 
         # Define Actor local and target networks
-        self.critic_local = Critic(
+        self.critic_local = Critic( #定义一个Critic网络，critic_local的作用是用于计算 Q 值。
             env.state_size, fcs1_units=fc1_units_critic, fc2_units=fc2_units_critic
         )
-        self.critic_target = Critic(
+        self.critic_target = Critic( #定义一个target Critic网络，critic_target的作用是用于计算目标 Q 值。
             env.state_size, fcs1_units=fc1_units_critic, fc2_units=fc2_units_critic
         )
 
         # Define the optimizer and its learning rate scheduler for the Critic networks
-        critic_optimizer = optim.Adam(
+        critic_optimizer = optim.Adam( 
+            #定义一个优化器，主要用来优化Critic网络，optim.Adam的主要作用是优化神经网络的参数。
             self.critic_local.parameters(),
             lr=lr_critic,
             weight_decay=weight_decay_critic,
         )
+        #定义一个学习率调度器，主要用来调整学习率。
         critic_lr_scheduler = lr_scheduler.StepLR(
             critic_optimizer, step_size=mile * 100, gamma=0.5
         )
@@ -618,31 +637,34 @@ class Agent:
 
         # Initialize containers to add some useful information about training (useful to
         # visualize with tensorboard)
-        mean_rewards = deque(maxlen=10)
-        cum_rewards = []
-        actor_losses = deque(maxlen=10)
-        critic_losses = deque(maxlen=10)
+        mean_rewards = deque(maxlen=10)#mean_rewards 平均奖励收集队列
+        cum_rewards = [] #cum_rewards 累积奖励收集列表
+        actor_losses = deque(maxlen=10) #actor_losses Actor损失收集队列
+        critic_losses = deque(maxlen=10) #critic_losses Critic损失收集队列
 
+          #重置Node的计数器，当使用优先级经验回放时，重置计数器。
         # Reset counting the nodes of the SumTree when using Prioritized Experience
         # Replay.
         Node.reset_count()
         # Pretraining to partially fill the replay buffer.
-        self.pretrain(env, total_steps=total_steps)
+        self.pretrain(env, total_steps=total_steps)#预训练
         i = 0
         # exploration_probability = 1
-        N_train = total_episodes * env.T // learn_freq
+        N_train = total_episodes * env.T // learn_freq #N_train 为训练次数=总训练次数*环境的时间步数/learn_freq
         beta = self.beta0
-        self.reset()
+        self.reset() #初始化
         n_train = 0
 
-        range_total_episodes = range(total_episodes)
+        range_total_episodes = range(total_episodes)# range_total_episodes 为总训练次数
+        # tqdm_notebook 和 tqdm 是 Python 中的进度条库，用于显示训练过程中的进度条，
+        # 主要区别是前者用于 Jupyter Notebook，后者用于 Python 脚本。
         # setup progress bar
-        if progress == "tqdm_notebook":
-            from tqdm import tqdm_notebook
+        if progress == "tqdm_notebook": #
+            from tqdm import tqdm_notebook #导入tqdm_notebook，用于显示进度条
 
             range_total_episodes = tqdm_notebook(list(range_total_episodes))
-            progress_bar = range_total_episodes
-        elif progress == "tqdm":
+            progress_bar = range_total_episodes #进度条
+        elif progress == "tqdm":#如果progress为tqdm
             from tqdm import tqdm
 
             range_total_episodes = tqdm(list(range_total_episodes))
@@ -650,69 +672,79 @@ class Agent:
         else:
             progress_bar = None
 
-        for episode in range_total_episodes:
+        for episode in range_total_episodes:#·开始训练，遍历总训练次数
             # start_time = time()
-            episode_rewards = []
+            episode_rewards = []#episode_rewards 为每个回合的收益
             env.reset()
             state = env.get_state()
             done = env.done
             train_iter = 0
             # Environment Exploration phase
             while not done:
+                #explore_probability的意义是探索概率，用于控制噪声的大小。
                 explore_probability = explore_stop + (1 - explore_stop) * np.exp(
-                    -decay_rate * i
+                    -decay_rate * i  #np.exp()函数是计算 e 的幂次方
                 )
-                action = self.act(
+                action = self.act(#获取动作。原理是在动作中添加噪声，以便智能体可以在环境中探索不同的动作空间，学习到更优的策略。
                     state,
-                    truncate=(not env.squared_risk),
-                    max_pos=env.max_pos,
-                    explore_probability=explore_probability,
+                    truncate=(not env.squared_risk),#是否使用平方风险项 是否截断噪声的标志。
+                    max_pos=env.max_pos,#最大持仓量。
+                    explore_probability=explore_probability,#探索概率
                 )
-                reward = env.step(action)
-                writer.add_scalar("State/signal", state[0], i)
-                writer.add_scalar("Signal/position", state[1], i)
-                writer.add_scalar("Signal/action", action, i)
-                next_state = env.get_state()
+                
+                reward = env.step(action)#执行action，一个action对应一个reward，也就是收益
+                
+                #add_scalar 函数的作用是将标量写入 tensorboard，tensorboard的主要作用是可视化训练过程。
+                
+                writer.add_scalar("State/signal", state[0], i)#将state[0]写入tensorboard
+                writer.add_scalar("Signal/position", state[1], i)#将state[1]写入tensorboard
+                writer.add_scalar("Signal/action", action, i)#将action写入tensorboard
+                next_state = env.get_state()#获取下一个状态
                 done = env.done
-                self.step(state, action, reward, next_state, done)
-                state = next_state
-                episode_rewards.append(reward)
-                i += 1
-                train_iter += 1
-                if done:
+                self.step(state, action, reward, next_state, done)#将经验保存到回放缓冲区中
+                state = next_state#更新状态
+                episode_rewards.append(reward)#记录每个回合的收益
+                i += 1#更新计数器
+                train_iter += 1#更新训练次数
+                if done:#如果完成，重置环境
                     self.reset()
-                    total_reward = np.sum(episode_rewards)
-                    mean_rewards.append(total_reward)
+                    #结算收益
+                    total_reward = np.sum(episode_rewards)#总收益
+                    mean_rewards.append(total_reward)#添加计算平均收益
                     if (episode > 0) and (episode % 5 == 0):
-                        mean_r = np.mean(mean_rewards)
-                        cum_rewards.append(mean_r)
-                        writer.add_scalar("Reward & Loss/reward", mean_r, episode)
+                        mean_r = np.mean(mean_rewards)#计算平均收益 #np.mean函数是计算平均值
+                        cum_rewards.append(mean_r) #添加平均收益
+                        #可视化训练过程
+                        writer.add_scalar("Reward & Loss/reward", mean_r, episode)#收益和亏损收益比
                         writer.add_scalar(
-                            "Reward & Loss/actor_loss", np.mean(actor_losses), episode
+                            "Reward & Loss/actor_loss", np.mean(actor_losses), episode #收益和actor_losses亏损收益比
                         )
                         writer.add_scalar(
-                            "Reward & Loss/critic_loss", np.mean(critic_losses), episode
+                            "Reward & Loss/critic_loss", np.mean(critic_losses), episode #收益和critic_losses亏损收益比
                         )
 
                 # Learning phase
-                if train_iter % learn_freq == 0:
+                if train_iter % learn_freq == 0: #如果train_iter % learn_freq == 0 
+                    # 这个余数的意义是每次（number_steps%learn_freq == 0）时，我们进行一次训练步骤。
                     n_train += 1
                     if self.memory_type == "uniform":
                         # Sample a batch of experiences :
                         # (state, action, reward, next_state, done)
-                        transitions = self.memory.sample(self.batch_size)
+                        transitions = self.memory.sample(self.batch_size)#申请缓冲区
                         batch = Transition(*zip(*transitions))
-                        states_mb = torch.cat(batch.state)
+                        #*_mb 参数的意义是将多个参数打包成元组，然后传递给函数。
+                        states_mb = torch.cat(batch.state) #torch.cat()函数是将张量拼接在一起
                         actions_mb = torch.cat(batch.action)
                         rewards_mb = torch.cat(batch.reward)
                         next_states_mb = torch.cat(batch.next_state)
                         dones_mb = torch.cat(batch.dones)
 
-                    elif self.memory_type == "prioritized":
+                    elif self.memory_type == "prioritized":#如果memory_type为prioritized
                         # Sample a batch of experiences :
                         # (state, action, reward, next_state, done)
+                        #主要区别是在经验回放中，我们需要从优先级经验回放缓冲区中采样经验。 indices的作用计算probabilities（概率）
                         transitions, indices = self.memory.sample(self.batch_size)
-                        batch = Transition(*zip(*transitions))
+                        batch = Transition(*zip(*transitions))#batch 批量
                         states_mb = torch.cat(batch.state)
                         actions_mb = torch.cat(batch.action)
                         rewards_mb = torch.cat(batch.reward)
@@ -720,12 +752,12 @@ class Agent:
                         dones_mb = torch.cat(batch.dones)
 
                     # Update local Critic network
-                    # Use target Actor to compute the next actions to take at the sampled
+                    # Use target Actor to compute the next actions to take at the sampled# 使用目标actor网络来计算下一次收益
                     # next states
-                    actions_next = self.actor_target(next_states_mb)
+                    actions_next = self.actor_target(next_states_mb)#创建下一次收益action
                     # Use target Critic to compute the Q values of the sampled
                     # (next_states, actions)
-                    Q_targets_next = self.critic_target(next_states_mb, actions_next)
+                    Q_targets_next = self.critic_target(next_states_mb, actions_next)#计算Q值
                     Q_targets = rewards_mb + (
                         self.gamma * Q_targets_next * dones_mb
                     )  # Compute target Q values
@@ -733,14 +765,15 @@ class Agent:
                     Q_expected = self.critic_local(states_mb, actions_mb)
                     # Compute the TD errors (needed to update priorities when using
                     # Prioritized replay, and also to compute the loss)
+                    #td_errors表示 functional.l1_loss 函数的输出，即 Q_expected 和 Q_targets 之间的绝对误差。
                     td_errors = F.l1_loss(Q_expected, Q_targets, reduction="none")
-                    # Update the priorities of experiences in the sampled batch when
-                    # Prioritized Experience Replay is used
+                    # Update the priorities of experiences in the sampled batch when #更新批量采样中经验的优先级
+                    # Prioritized Experience Replay is used #如果使用优先级经验回放
                     if self.memory_type == "prioritized":
                         # Sum of all priorities.
-                        sum_priorities = self.memory.sum_priorities()
+                        sum_priorities = self.memory.sum_priorities()#求和
                         # Sampling probabilities.
-                        probabilities = (
+                        probabilities = (#更新优先级，probabilities：采样概率
                             self.memory.retrieve_priorities(indices) / sum_priorities
                         ).reshape((-1, 1))
                         # Importance sampling weights.
@@ -766,29 +799,35 @@ class Agent:
                     elif self.memory_type == "uniform":
                         # Compute Critic loss function.
                         critic_loss = (td_errors ** 2).mean() / 2
-
+                  #---------------------------------------------- critic 上的损失率计算
                     # Store the current Critic loss value.
-                    critic_losses.append(critic_loss.data.item())
+                    critic_losses.append(critic_loss.data.item())#将当前Critic损失值存储到列表中
 
                     # Minimize the Critic loss
-                    critic_optimizer.zero_grad()
-                    critic_loss.backward()
+                    critic_optimizer.zero_grad()#优化器的模型的参数梯度初始化为0
+                    critic_loss.backward()#反向传播计算梯度
                     # Clip the gradient to avoid taking huge steps in the gradient update
                     torch.nn.utils.clip_grad_norm_(self.critic_local.parameters(), 0.1)
-                    critic_optimizer.step()
-                    critic_lr_scheduler.step()
-
+                    critic_optimizer.step()#更新参数
+                    critic_lr_scheduler.step()#更新学习率
+                    
+                #----------------------------------------     actor local的损失率计算
                     # Update local Actor network
                     # Compute Actor loss which comes from the Off-Policy Deterministic
+                    #策略梯度定理 
                     # Policy gradient theorem,
                     # see http://proceedings.mlr.press/v32/silver14.pdf and https://arxiv.org/abs/1509.02971  # noqa
+                    #更新 local Actor 网络模型
+                    #计算 Actor 损失，该损失来自于离线策略确定性策略梯度定理
+                    #
                     actions_pred = self.actor_local(states_mb)
-                    actor_loss = -self.critic_local(states_mb, actions_pred).mean()
-                    actor_losses.append(actor_loss.data.item())
+                    actor_loss = -self.critic_local(states_mb, actions_pred).mean() #计算Actor损失，梯度损失
+                    actor_losses.append(actor_loss.data.item())# 记录损失率
 
+                    #最小化损失，更新Actor损失
                     # Minimize the Actor loss
-                    actor_optimizer.zero_grad()
-                    actor_loss.backward()
+                    actor_optimizer.zero_grad()#模型参数初始化
+                    actor_loss.backward()#反向传播计算
                     # Clip the gradient to avoid taking huge steps in the gradient update
                     torch.nn.utils.clip_grad_norm_(self.actor_local.parameters(), 0.1)
                     actor_optimizer.step()
@@ -801,7 +840,7 @@ class Agent:
             # Plot the shape of the function and a function with approximately optimal
             # shape (regarding the cumulative reward) found by a gridsearch over lambd and
             # psi parameters
-            if plots:
+            if plots: #作图。将函数的形状和通过对 lambd 和 psi 参数进行网格搜索找到的近似最优形状的函数绘制出来。
                 plt.clf()
                 self.actor_local.eval()
                 with torch.no_grad():
@@ -849,10 +888,11 @@ class Agent:
                 self.actor_local.train()
 
             # Save the Actor network weights after a number of episodes each time
-            if (episode % freq) == 0:
+            if (episode % freq) == 0:#保存模型权重
                 model_file = weights + "ddpg_" + str(episode) + ".pth"
                 torch.save(self.actor_local.state_dict(), model_file)
                 # print('\nSaved model to ' + model_file + '\n')
 
+       #保存scalars 数据到json文件
         writer.export_scalars_to_json("./all_scalars.json")
         writer.close()
