@@ -307,8 +307,8 @@ plt.show()
 plot_bars(scores) # plot_bars函数的作用：模型评估得分的条形图
 
 sorted_scores = sorted(scores.values(), reverse=True)#排序 scores
-print("Optimal agent score   : %.2f" % sorted_scores[0])
-print("Best DDPG agent score : %.2f" % sorted_scores[1])
+print("Optimal agent score   : %.2f" % sorted_scores[0]) #最优解模式下得分
+print("Best DDPG agent score : %.2f" % sorted_scores[1])#DDPG 得分
 
 path_weights = path + "weights/"
 models_keys = [0, 10, 50, 90, 110]

@@ -221,6 +221,7 @@ def optimal_f(p, pi, lambd=0.5, psi=0.3, cost="trade_l2"):
             return (p - psi) / (2 * lambd) - pi
 
 
+#最优函数向量
 # Vectorizing the optimal solution.
 optimal_f_vec = np.vectorize(optimal_f, excluded=set(["pi", "lambd", "psi", "cost"]))
 
@@ -243,8 +244,9 @@ def plot_function(
     """
     Description
     ---------------
+    #画出每个模型的函数图，其中最优模型的索引为0 绘制每个模型的函数以及给定位置和的最优函数信号的范围。
     Plot the functions of each model along with the optimal function given a position and
-    a range for the signal.
+    a range for the signal. 
 
     Parameters
     ---------------
@@ -269,31 +271,42 @@ def plot_function(
     clip            : Boolean, whether to clip positions beyond maxpos or not.
 
     Returns
+    
+    model1, model2, model3 和 optimal1, optimal2, optimal3 分别代表模型预测的行为策略与理论上的最优策略在不同信号条件下的表现
+    
+    model1: 代表模型在接收到信号量为-1时的预测策略输出。这里的模型是通过深度强化学习（DDPG）训练得到的代理（Actor），它针对输入的特定信号（在本例中是负信号）预测出最佳的行动（如仓位调整、买卖决策等）。
+    model2: 类似地，这是模型在信号量为0时的预测策略。它反映了模型在无明显看涨或看跌信号时的决策行为。
+    model3: 模型在接收到信号量为1时的预测策略。这通常对应于强烈的看涨信号，模型需要据此决定如何调整仓位或执行相应操作。
+    
+    optimal1, optimal2, optimal3: 这些代表理论上的最优策略或函数，依据不同的风险考量（平方风险或默认风险设置）计算得出。具体来说：
+    optimal1: 在信号量为-1时的理论最优策略。它是通过optimal_f_vec或optimal_max_pos_vec函数计算的，根据环境配置（如成本、阈值、最大仓位等）确定。
+    optimal2: 在信号为中性（0）时的最优策略，同样根据理论模型计算。
+    optimal3: 在信号强烈看涨（+1）时的最优策略
     ---------------
     """
 
     range_values = np.arange(low, high, step)
-    signal_zeros = torch.tensor(
+    signal_zeros = torch.tensor(#信号量为0
         np.vstack((range_values, np.zeros(len(range_values)))).T, dtype=torch.float
     )
-    signal_ones_pos = torch.tensor(
+    signal_ones_pos = torch.tensor(#信号量为1
         np.vstack((range_values, pi * np.ones(len(range_values)))).T, dtype=torch.float
     )
-    signal_ones_neg = torch.tensor(
+    signal_ones_neg = torch.tensor(#信号量为-1
         np.vstack((range_values, -pi * np.ones(len(range_values)))).T, dtype=torch.float
     )
-    if env.squared_risk:
-        optimal1 = optimal_f_vec(
+    if env.squared_risk:#如果是平方风险
+        optimal1 = optimal_f_vec(#-pi 位置的最优函数
             signal_ones_neg[:, 0].numpy(), -pi, lambd=lambd, psi=psi, cost=env.cost
         )
-        optimal2 = optimal_f_vec(
+        optimal2 = optimal_f_vec( #0 位置的最优函数
             signal_zeros[:, 0].numpy(), 0, lambd=lambd, psi=psi, cost=env.cost
         )
-        optimal3 = optimal_f_vec(
+        optimal3 = optimal_f_vec(#pi 位置的最优函数
             signal_ones_pos[:, 0].numpy(), pi, lambd=lambd, psi=psi, cost=env.cost
         )
 
-    else:
+    else:#否则采用默认的最优函数
         optimal1 = optimal_max_pos_vec(
             signal_ones_neg[:, 0].numpy(), -pi, thresh, env.max_pos
         )
