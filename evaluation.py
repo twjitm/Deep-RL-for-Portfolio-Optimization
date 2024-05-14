@@ -31,7 +31,7 @@ def test_models(
     Returns
     ---------------
     scores          : Dict, - keys   : training iteration of the saved model.
-                            - values : average score over the evaluation episodes.
+                            - values : average score over the evaluation episodes. #评分，评分是评估集的平均分
     scores_episodes : Dict, - keys   : training iteration of the saved model.
                             - values : Dict, - keys   : index of the evaluation episode.
                                              - values : score over the evaluation episode.
@@ -79,10 +79,12 @@ def test_models(
     return scores, scores_episodes, scores_cumsum, pnls, positions
 
 
+#plot_bars函数的作用：收益柱状图
 def plot_bars(scores):
     """
     Description
     ---------------
+    #画出每个模型的评分柱状图，其中最优模型的索引为0
     Bar plot of the evaluation score across the models. Note that the optimal model is indexed by 0
 
     Parameters

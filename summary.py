@@ -254,6 +254,7 @@ path_weights = path + "weights/"
 #score_cumsum:累积分数
 #pnls:收益
 #positions:持仓
+#scores:分数，主要是体现收益
 scores, scores_episodes, scores_cumsum, pnls, positions = test_models(#测试模型 
     path_weights, env, n_episodes=10, fc1_units=16, fc2_units=16
 ) #评估模型 
@@ -276,14 +277,16 @@ scores_episodes[-1] = score_episode #最后一个收益
 # similarly .
 #给定预测器信号，将智能体所占据的位置和那些位置可视化 采用近似最优解，发现位置的演变非常相似
 #以下代码都是作图用，没有啥号看的，
+
+#纵轴(𝑝𝑡,𝜋𝑡pt,πt: 显示了仓位(𝑝𝑡pt)和策略(𝜋𝑡πt)的值
 # +
 env.reset(random_state=730001) #重置环境
 plt.figure(figsize=(15, 6)) #绘制图像
 
 plt.subplot(1, 2, 1)
-plt.plot(positions[110][730001], label="DDPG", color="g")
-plt.plot(positions_opt[730001], label="OPT", color="r")
-plt.plot(env.signal[1:], label="signal$", color="y")#env.signal[1:]在智能体训练过程中的，最优解的预测值
+plt.plot(positions[110][730001], label="DDPG", color="g") #DDPG (绿色曲线): DDPG算法的智能体在环境中的表现
+plt.plot(positions_opt[730001], label="OPT", color="r") #**最优策略(OPT)**或者是一个基准策略的表现
+plt.plot(env.signal[1:], label="signal$", color="y")#env.signal[1:]在智能体训练过程中的，表市场价格、需求量或其他影响决策的外部因素随时间的变化。这条曲线帮助我们理解智能体的决策是如何响应环境变化的。
 plt.xlim(300, 600) #x轴范围，表示持仓的股的索引
 plt.xlabel(r"$t$", fontsize=15) 
 plt.ylabel(r"$p_t, \pi_t$", fontsize=15) #表示持仓数量

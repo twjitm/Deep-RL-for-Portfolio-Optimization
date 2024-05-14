@@ -328,7 +328,7 @@ class Environment:
                     total_reward = np.sum(episode_rewards)
                     total_pnl = np.sum(episode_pnls)
                     if random_states is not None:
-                        scores[random_states[episode]] = total_reward
+                        scores[random_states[episode]] = total_reward #累计奖励
                         scores_cumsum[random_states[episode]] = np.cumsum(
                             episode_rewards
                         )
