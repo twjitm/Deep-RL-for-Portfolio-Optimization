@@ -17,26 +17,26 @@
 # 我们展示了我们在论文中考虑的三个可处理成本模型上使用深度强化学习获得的主要结果。
 
 # %matplotlib inline 
-#在jupyter notebook中使用matplotlib绘图
+# 在jupyter notebook中使用matplotlib绘图
 
 # +
 import os
-import seaborn as sns #用于绘制热力图的工具包
-import matplotlib.pyplot as plt #用于绘制图形的工具包
-import numpy as np #用于数值计算的工具包
-import pandas as pd #用于数据处理的工具包
-from tqdm import tqdm_notebook #用于显示进度条的工具包
-import warnings #用于忽略警告的工具包
+import seaborn as sns  # 用于绘制热力图的工具包
+import matplotlib.pyplot as plt  # 用于绘制图形的工具包
+import numpy as np  # 用于数值计算的工具包
+import pandas as pd  # 用于数据处理的工具包
+from tqdm import tqdm_notebook  # 用于显示进度条的工具包
+import warnings  # 用于忽略警告的工具包
 
 # local imports
-from agent import Agent #导入Agent类
-from env import Environment #导入Environment类
-from evaluation import test_models, plot_bars, plot_function #导入test_models, plot_bars, plot_function函数
+from agent import Agent  # 导入Agent类
+from env import Environment  # 导入Environment类
+from evaluation import test_models, plot_bars, plot_function  # 导入test_models, plot_bars, plot_function函数
 
 ##### 本文件的主要作用就是演示三种交易模型
 # -
 
-warnings.filterwarnings("ignore") #忽略警告
+warnings.filterwarnings("ignore")  # 忽略警告
 
 # + [markdown] toc-hr-collapsed=false
 # # Linear trading costs with risk penalty
@@ -51,7 +51,7 @@ warnings.filterwarnings("ignore") #忽略警告
 
 # for simplicity we will consider an approximate optimal solution which shape is
 # parameterized making this solution easily found by a simple girdSearch. #一个简单的网格搜索，找到最佳参数
-#函数的主要算法 
+# 函数的主要算法
 # $$ f\left(\pi_{t-1}, p_t \right) = \begin{cases} \frac{1}{2\widetilde{\lambda}}\left(p_t
 # - \widetilde{\psi} \right) - \pi_{t-1}; \hspace{2mm} p_t \ge \widetilde{\psi} +
 # 2\widetilde{\lambda} \pi_{t-1} \\ 0 \hspace{13mm}; \hspace{2mm} -\widetilde{\psi} +
@@ -78,17 +78,17 @@ warnings.filterwarnings("ignore") #忽略警告
 # +
 # Environment parameters
 
-SIGMA = 0.1 #波动率
-THETA = 0.1 #OU过程的参数
-T = 5000 #时间长度
-LAMBD = 0.3 #lambda系数
-PSI = 4 #psi 交易的惩罚、或者收益
+SIGMA = 0.1  # 波动率
+THETA = 0.1  # OU过程的参数
+T = 5000  # 时间长度
+LAMBD = 0.3  # lambda系数
+PSI = 4  # psi 交易的惩罚、或者收益
 # -
 # 初始化一个Environment
 env = Environment(
     sigma=SIGMA, theta=THETA, T=T, lambd=LAMBD, psi=PSI, cost="trade_l1", scale_reward=1
 )
-#----------------------------------------------------------------------------------start ------------------------
+# ----------------------------------------------------------------------------------start ------------------------
 ### ***Optimal Solution*** 模式一: Grid,网格模式
 # ***GridSearch*** 
 # Grid,网格模式
@@ -98,63 +98,63 @@ env = Environment(
 # 我们执行一个GridSearch来寻找最佳参数$\widetilde{\lambda}, \widetilde{\psi}$，使用10个episode的平均累积奖励。
 # +
 # %%time
-random_state = 1024 #随机种子
-n_episodes = 10 #episode的数量 
-rng = np.random.RandomState(random_state) #随机种子生成器
-random_states = rng.randint(0, int(1e6), size=n_episodes) #生成随机种子
+random_state = 1024  # 随机种子
+n_episodes = 10  # episode的数量
+rng = np.random.RandomState(random_state)  # 随机种子生成器
+random_states = rng.randint(0, int(1e6), size=n_episodes)  # 生成随机种子
 
-lambds = np.linspace(0.2, 0.6, 10) #一组lambds。指定的间隔内返回均匀间隔的数字
-psis = np.linspace(0.8, 1.2, 10) #一组psis，用于选举最佳参数
+lambds = np.linspace(0.2, 0.6, 10)  # 一组lambds。指定的间隔内返回均匀间隔的数字
+psis = np.linspace(0.8, 1.2, 10)  # 一组psis，用于选举最佳参数
 
 # 1st dim: lambdas; 2nd dim: psis; 3rd dim: episodes
-#初始化一个收益聚合
+# 初始化一个收益聚合
 scores_episodes = np.empty((len(lambds), len(psis), n_episodes))
 scores = np.empty((len(lambds), len(psis)))  # 1st dim: lambdas; 2nd dim: psis
 
-#遍历lambds
+# 遍历lambds
 for i, lambd in tqdm_notebook(list(enumerate(lambds))):
     for j, psi in tqdm_notebook(list(enumerate(psis))):
-        #模拟10个episode，test_apply返回收益
+        # 模拟10个episode，test_apply返回收益
         score, score_episode, _, _, _ = env.test_apply(
             total_episodes=n_episodes, random_states=random_states, lambd=lambd, psi=psi
         )
-        #填充收益集合
-        scores[i, j] = score#收益
-        scores_episodes[i, j, :] = list(score_episode.values())#收益集合
+        # 填充收益集合
+        scores[i, j] = score  # 收益
+        scores_episodes[i, j, :] = list(score_episode.values())  # 收益集合
         # print('lambd=%.1f , psi=%.1f -> score=%.3f \n' % (lambd, psi, score))
 # -
-#作图
+# 作图
 plt.figure(figsize=(8, 6))
-sns.heatmap(#绘制热力图
+sns.heatmap(  # 绘制热力图
     pd.DataFrame(
         scores,
         index=pd.Index(np.round(lambds, 2), name=r"$\widetilde{\lambda}$"),
         columns=pd.Index(np.round(psis, 2), name=r"$\widetilde{\psi}$"),
     )
 )
-plt.show()#显示图片
+plt.show()  # 显示图片
 
 # +
-i_max = np.argmax(scores) // scores.shape[0] #返回最大值的索引
-j_max = np.argmax(scores[i_max, :]) #返回最大值的索引
+i_max = np.argmax(scores) // scores.shape[0]  # 返回最大值的索引
+j_max = np.argmax(scores[i_max, :])  # 返回最大值的索引
 
-lambd_max, psi_max = lambds[i_max], psis[j_max] #最大值的lambd和psi
+lambd_max, psi_max = lambds[i_max], psis[j_max]  # 最大值的lambd和psi
 print("lambd_max=%.2f , psi_max=%.2f" % (lambd_max, psi_max))
 
-#过程：
-#首先，通过创建一个 Agent 实例来初始化智能体，设置了智能体的一些参数，
-#接下来，设置了训练过程中的一些参数
-#调用 agent.train() 方法开始训练智能体。在训练过程中，智能体与环境进行交互，并根据交互经验来更新自己的参数。
-#训练过程中会保存智能体的模型参数到指定的路径，以便后续测试和分析。
-#调用 test_models() 方法对训练得到的智能体模型进行测试。测试过程中会加载之前保存的模型参数，并在环境中运行一定数量的测试周期，评估智能体的性能。
+# 过程：
+# 首先，通过创建一个 Agent 实例来初始化智能体，设置了智能体的一些参数，
+# 接下来，设置了训练过程中的一些参数
+# 调用 agent.train() 方法开始训练智能体。在训练过程中，智能体与环境进行交互，并根据交互经验来更新自己的参数。
+# 训练过程中会保存智能体的模型参数到指定的路径，以便后续测试和分析。
+# 调用 test_models() 方法对训练得到的智能体模型进行测试。测试过程中会加载之前保存的模型参数，并在环境中运行一定数量的测试周期，评估智能体的性能。
 
-#进行一些额外的测试，比如在随机种子和一些特定的测试周期下运行模型，以评估其性能。
-#最后，通过绘图和输出结果来展示训练和测试的结果，比如智能体的收益曲线、持仓情况等。
+# 进行一些额外的测试，比如在随机种子和一些特定的测试周期下运行模型，以评估其性能。
+# 最后，通过绘图和输出结果来展示训练和测试的结果，比如智能体的收益曲线、持仓情况等。
 
 # We find that $\widetilde{\lambda}=0.47, \widetilde{\psi}=0.93$
 
 # ## Training
-#采用DDPG算法进行训练
+# 采用DDPG算法进行训练
 # The agent is an actor critic architecture, both actor and critic networks are composed #
 # of:
 # - an inital fully connected layer of size $16$ with a reLU activation,#一个全连接层
@@ -177,35 +177,35 @@ print("lambd_max=%.2f , psi_max=%.2f" % (lambd_max, psi_max))
 
 # +
 # Agent parameters
-MAX_STEPS = 5000 #最大步数
-MEMORY_TYPE = "prioritized" #类型
-SLIDING = "oldest" #滑动窗口
-BATCH_SIZE = 2 ** 9 #步长
-MAX_SIZE = int(1e6) #最大大小
+MAX_STEPS = 5000  # 最大步数
+MEMORY_TYPE = "prioritized"  # 类型
+SLIDING = "oldest"  # 滑动窗口
+BATCH_SIZE = 2 ** 9  # 步长
+MAX_SIZE = int(1e6)  # 最大大小
 
 # Training parameters
 TOTAL_EPISODES = 200  # 总的训练周期数。每个周期包括从环境开始到结束的一系列交互步骤。
-TOTAL_STEPS = 1000 # 每个训练周期中的总步数。每一步是智能体与环境交互的一次。
-FREQ = 10 #频率 控制多久保存一次模型参数或输出训练信息的频率。例如，如果设置为10，则每10个周期保存一次模型参数或输出一次训练信息。
-LEARN_FREQ = 50 #控制多久更新一次智能体的参数。例如，如果设置为50，则每50个步骤更新一次智能体的参数。
-TAU_ACTOR = 0.3 #用于软更新（soft update）的时间常数，用于更新 Actor 网络的参数。软更新是一种渐进地将目标网络的参数更新为当前网络参数的方法。
-TAU_CRITIC = 0.1 #用于软更新的时间常数，用于更新 Critic 网络的参数。。
-LR_ACTOR = 1e-3 #Actor 网络的学习率。学习率控制了参数在每次更新时的调整大小。
-LR_CRITIC = 1e-2 # Critic 网络的学习率。
-WEIGHTS_DECAY_ACTOR = 0 #Actor 网络的权重衰减系数。权重衰减用于惩罚模型参数的大小，有助于防止过拟合。
-WEIGHTS_DECAY_CRITIC = 0 #Critic 网络的权重衰减系数。
-FC1_UNITS_ACTOR = 16 #Actor 网络中第一个全连接层的神经元数量。
-FC2_UNITS_ACTOR = 16 #Actor 网络中第二个全连接层的神经元数量。
-FC1_UNITS_CRITIC = 16 #Critic 网络中第一个全连接层的神经元数量。
-FC2_UNITS_CRITIC = 16 #Critic 网络中第二个全连接层的神经元数量
+TOTAL_STEPS = 1000  # 每个训练周期中的总步数。每一步是智能体与环境交互的一次。
+FREQ = 10  # 频率 控制多久保存一次模型参数或输出训练信息的频率。例如，如果设置为10，则每10个周期保存一次模型参数或输出一次训练信息。
+LEARN_FREQ = 50  # 控制多久更新一次智能体的参数。例如，如果设置为50，则每50个步骤更新一次智能体的参数。
+TAU_ACTOR = 0.3  # 用于软更新（soft update）的时间常数，用于更新 Actor 网络的参数。软更新是一种渐进地将目标网络的参数更新为当前网络参数的方法。
+TAU_CRITIC = 0.1  # 用于软更新的时间常数，用于更新 Critic 网络的参数。。
+LR_ACTOR = 1e-3  # Actor 网络的学习率。学习率控制了参数在每次更新时的调整大小。
+LR_CRITIC = 1e-2  # Critic 网络的学习率。
+WEIGHTS_DECAY_ACTOR = 0  # Actor 网络的权重衰减系数。权重衰减用于惩罚模型参数的大小，有助于防止过拟合。
+WEIGHTS_DECAY_CRITIC = 0  # Critic 网络的权重衰减系数。
+FC1_UNITS_ACTOR = 16  # Actor 网络中第一个全连接层的神经元数量。
+FC2_UNITS_ACTOR = 16  # Actor 网络中第二个全连接层的神经元数量。
+FC1_UNITS_CRITIC = 16  # Critic 网络中第一个全连接层的神经元数量。
+FC2_UNITS_CRITIC = 16  # Critic 网络中第二个全连接层的神经元数量
 
 ############################
-#这些参数在训练强化学习模型时非常重要，它们控制了训练的速度、稳定性和性能。通常情况下，
+# 这些参数在训练强化学习模型时非常重要，它们控制了训练的速度、稳定性和性能。通常情况下，
 # 这些参数需要根据具体的问题和模型进行调整和优化，以获得最佳的训练结果。
 ##########################
 # +
 # %%time
-#定义一个智能体，并且初始化对应的参数
+# 定义一个智能体，并且初始化对应的参数
 agent = Agent(
     max_size=MAX_SIZE,
     max_step=MAX_STEPS,
@@ -217,7 +217,7 @@ agent = Agent(
 path = "Experiment_linear_trading_cost_true_per/"
 if not os.path.exists(path + "weights/"):
     os.makedirs(path + "weights/")
-#发起训练
+# 发起训练
 agent.train(
     env=env,
     total_episodes=TOTAL_EPISODES,
@@ -238,58 +238,58 @@ agent.train(
     plots=True,
     lambd=lambd_max,
     psi=psi_max,
-    tensordir=path + "runs/", #tensorboard文件路径
-    mile=100, #每100步保存一次模型
-    decay_rate=1e-6, #学习率衰减率
+    tensordir=path + "runs/",  # tensorboard文件路径
+    mile=100,  # 每100步保存一次模型
+    decay_rate=1e-6,  # 学习率衰减率
 )
 # -
 
 # ***Evaluation***
 #
-#在10个新的测试episode上评估模型，并将其与近似最优解进行比较。
+# 在10个新的测试episode上评估模型，并将其与近似最优解进行比较。
 # We evaluate our models and compare them with the approximate optimal solution on $10$
 # new test episodes.
 
 path_weights = path + "weights/"
-#score_cumsum:累积分数
-#pnls:收益
-#positions:持仓
-#scores:分数，主要是体现收益
-scores, scores_episodes, scores_cumsum, pnls, positions = test_models(#测试模型 
+# score_cumsum:累积分数
+# pnls:收益
+# positions:持仓
+# scores:分数，主要是体现收益
+scores, scores_episodes, scores_cumsum, pnls, positions = test_models(  # 测试模型
     path_weights, env, n_episodes=10, fc1_units=16, fc2_units=16
-) #评估模型 
+)  # 评估模型
 
-random_state = 1024 #
-n_episodes = 10 #
+random_state = 1024  #
+n_episodes = 10  #
 rng = np.random.RandomState(random_state)
-#random_stats:随机种子
+# random_stats:随机种子
 random_states = rng.randint(0, int(1e6), size=n_episodes)
-#positions_opt :最优持仓
-score, score_episode, scores_cumsum_opt, pnls_opt, positions_opt = env.test_apply(# 运行测试模型
+# positions_opt :最优持仓
+score, score_episode, scores_cumsum_opt, pnls_opt, positions_opt = env.test_apply(  # 运行测试模型
     total_episodes=n_episodes, random_states=random_states, lambd=lambd_max, psi=psi_max
 )
-scores[-1] = score #最后一个收益分数
-scores_episodes[-1] = score_episode #最后一个收益
-
+scores[-1] = score  # 最后一个收益分数
+scores_episodes[-1] = score_episode  # 最后一个收益
 
 # Given a predictor signal, we visualize both the positions taken by our agent and those
 # taken by the approximate optimal solution, we find that the positions evolve very
 # similarly .
-#给定预测器信号，将智能体所占据的位置和那些位置可视化 采用近似最优解，发现位置的演变非常相似
-#以下代码都是作图用，没有啥号看的，
+# 给定预测器信号，将智能体所占据的位置和那些位置可视化 采用近似最优解，发现位置的演变非常相似
+# 以下代码都是作图用，没有啥号看的，
 
-#纵轴(𝑝𝑡,𝜋𝑡pt,πt: 显示了仓位(𝑝𝑡pt)和策略(𝜋𝑡πt)的值
+# 纵轴(𝑝𝑡,𝜋𝑡pt,πt: 显示了仓位(𝑝𝑡pt)和策略(𝜋𝑡πt)的值
 # +
-env.reset(random_state=730001) #重置环境
-plt.figure(figsize=(15, 6)) #绘制图像
+env.reset(random_state=730001)  # 重置环境
+plt.figure(figsize=(15, 6))  # 绘制图像
 
 plt.subplot(1, 2, 1)
-plt.plot(positions[110][730001], label="DDPG", color="g") #DDPG (绿色曲线): DDPG算法的智能体在环境中的表现
-plt.plot(positions_opt[730001], label="OPT", color="r") #**最优策略(OPT)**或者是一个基准策略的表现
-plt.plot(env.signal[1:], label="signal$", color="y")#env.signal[1:]在智能体训练过程中的，表市场价格、需求量或其他影响决策的外部因素随时间的变化。这条曲线帮助我们理解智能体的决策是如何响应环境变化的。
-plt.xlim(300, 600) #x轴范围，表示持仓的股的索引
-plt.xlabel(r"$t$", fontsize=15) 
-plt.ylabel(r"$p_t, \pi_t$", fontsize=15) #表示持仓数量
+plt.plot(positions[110][730001], label="DDPG", color="g")  # DDPG (绿色曲线): DDPG算法的智能体在环境中的表现
+plt.plot(positions_opt[730001], label="OPT", color="r")  # **最优策略(OPT)**或者是一个基准策略的表现
+plt.plot(env.signal[1:], label="signal$",
+         color="y")  # env.signal[1:]在智能体训练过程中的，表市场价格、需求量或其他影响决策的外部因素随时间的变化。这条曲线帮助我们理解智能体的决策是如何响应环境变化的。
+plt.xlim(300, 600)  # x轴范围，表示持仓的股的索引
+plt.xlabel(r"$t$", fontsize=15)
+plt.ylabel(r"$p_t, \pi_t$", fontsize=15)  # 表示持仓数量
 plt.legend()
 
 plt.subplot(1, 2, 2)
@@ -304,11 +304,13 @@ plt.savefig("positions_penalty.png")
 plt.show()
 # -
 
-plot_bars(scores) # plot_bars函数的作用：模型评估得分的条形图
+# scores 来源与ddpg模型的评估收益曲线数据源
 
-sorted_scores = sorted(scores.values(), reverse=True)#排序 scores
-print("Optimal agent score   : %.2f" % sorted_scores[0]) #最优解模式下得分
-print("Best DDPG agent score : %.2f" % sorted_scores[1])#DDPG 得分
+plot_bars(scores)  # plot_bars函数的作用：模型评估得分的条形图
+
+sorted_scores = sorted(scores.values(), reverse=True)  # 排序 scores
+print("Optimal agent score   : %.2f" % sorted_scores[0])  # 最优解模式下得分
+print("Best DDPG agent score : %.2f" % sorted_scores[1])  # DDPG 得分
 
 path_weights = path + "weights/"
 models_keys = [0, 10, 50, 90, 110]
@@ -322,10 +324,12 @@ plot_function(
     psi=psi_max,
     fc1_units=16,
     fc2_units=16,
-)
-#--------------------------------------------end-------------------------------------------------------
-#--------------------------------------------start----------------------------------------------------
-#线性交易成本与风险约束
+
+
+#ddpg训练流程结束
+# --------------------------------------------end-------------------------------------------------------
+# --------------------------------------------start----------------------------------------------------
+# 线性交易成本与风险约束
 # # Linear trading costs with risk constraint
 
 # We can model the problem in two ways here: #；两种建模函数
@@ -383,7 +387,7 @@ plot_function(
 # Environment parameters
 
 
-#第一种建模方式：
+# 第一种建模方式：
 # 奖励函数定义为 $r(\pi_t, p_t) = \pi_t p_t - \psi | \pi_t - \pi_{t-1}|$。
 # 这意味着智能体在每一步的奖励由当前持仓量 $\pi_t$ 与价格 $p_t$ 的乘积以及持仓量变化的绝对值的惩罚组成。
 # 此外，动作（交易）被限制在区间 $[-M, M]$ 内，这意味着智能体不会受到在该区间外进行交易的惩罚。
@@ -408,10 +412,12 @@ env = Environment(
 
 alpha, beta, gamma = 10, 10, MAXPOS / 4
 
-#tanh_penalty函数的作用：tanh平滑惩罚障碍
-def tanh_penalty(pi): 
+
+# tanh_penalty函数的作用：tanh平滑惩罚障碍
+def tanh_penalty(pi):
     # tanh平滑惩罚障碍
     return beta * (np.tanh(alpha * (abs(pi) - MAXPOS - gamma)) + 1)
+
 
 plt.plot(np.linspace(0, 5), tanh_penalty(np.linspace(0, 5)), label="tanh_penalty")
 plt.axvline(MAXPOS, color="r", label="MAXPOS")
@@ -425,7 +431,7 @@ plt.show()
 MAX_STEPS = 5000
 MEMORY_TYPE = "prioritized"
 SLIDING = "oldest"
-BATCH_SIZE = 2 ** 9 # batch size 批处理大小
+BATCH_SIZE = 2 ** 9  # batch size 批处理大小
 MAX_SIZE = int(1e6)
 
 # Training parameters
@@ -487,7 +493,7 @@ agent.train(
 # -
 
 path_weights = path + "weights/"
-scores, scores_episodes, scores_cumsum, pnls, positions = test_models(#定义测试模型
+scores, scores_episodes, scores_cumsum, pnls, positions = test_models(  # 定义测试模型
     path_weights, env, n_episodes=10, fc1_units=16, fc2_units=16
 )
 
@@ -495,16 +501,16 @@ random_state = 1024
 n_episodes = 10
 rng = np.random.RandomState(random_state)
 random_states = rng.randint(0, int(1e6), size=n_episodes)
-score, score_episode, scores_cumsum_opt, pnls_opt, positions_opt = env.test_apply( #测试交易
+score, score_episode, scores_cumsum_opt, pnls_opt, positions_opt = env.test_apply(  # 测试交易
     total_episodes=n_episodes, random_states=random_states, thresh=0.95
 )
 scores[-1] = score
 scores_episodes[-1] = score_episode
 
-plot_bars(scores) #收益曲线图
-#作图
+plot_bars(scores)  # 收益曲线图
+# 作图
 models_keys = [0, 20, 80, 120, 140]
-plot_function( #绘制函数 path_weights
+plot_function(  # 绘制函数 path_weights
     path_weights,
     env,
     models_keys,
@@ -541,16 +547,16 @@ plt.legend()
 
 plt.savefig("positions_constraint_per.png")
 plt.show()
-#------------------------------------------------模型三：影响成本（impact cost）的方形成本模型 ----------------------------------
+# ------------------------------------------------模型三：影响成本（impact cost）的方形成本模型 ----------------------------------
 # -
-#影响成本
-#在这种成本模型中，除了之前提到的奖励函数外，还引入了一个影响成本（impact cost）的方形成本模型。让我来解释一下：
-#影响成本是指在交易市场中买卖资产所带来的价格波动。它是由于交易量大、市场流动性低等因素导致的。影响成本的存在使得买卖交易不再是零和游戏，因为交易一方的操作可能会影响市场价格，从而影响另一方的收益。
-#这种成本模型中，考虑了一个方形的影响成本模型。具体来说，成本模型定义为：
-#𝐶(𝜋𝑡,𝑎𝑡)=𝑐⋅𝑎𝑡2C(πt ,at )=c⋅at2
-#其中：$C(\pi_t, a_t)$ 是在持仓量为 $\pi_t$ 时执行动作 $a_t$ 所产生的成本。$c$ 是影响成本的系数，表示每单位交易量的成本。
-#这种成本模型表明，当智能体执行一个动作时，所产生的成本与动作的平方成正比。这意味着，动作的大小对成本的影响是非线性的，而且随着动作的增加而增加。
-#引入影响成本模型可以更真实地模拟金融市场中的交易成本，并且有助于智能体学习更优化的交易策略，考虑到成本的影响。
+# 影响成本
+# 在这种成本模型中，除了之前提到的奖励函数外，还引入了一个影响成本（impact cost）的方形成本模型。让我来解释一下：
+# 影响成本是指在交易市场中买卖资产所带来的价格波动。它是由于交易量大、市场流动性低等因素导致的。影响成本的存在使得买卖交易不再是零和游戏，因为交易一方的操作可能会影响市场价格，从而影响另一方的收益。
+# 这种成本模型中，考虑了一个方形的影响成本模型。具体来说，成本模型定义为：
+# 𝐶(𝜋𝑡,𝑎𝑡)=𝑐⋅𝑎𝑡2C(πt ,at )=c⋅at2
+# 其中：$C(\pi_t, a_t)$ 是在持仓量为 $\pi_t$ 时执行动作 $a_t$ 所产生的成本。$c$ 是影响成本的系数，表示每单位交易量的成本。
+# 这种成本模型表明，当智能体执行一个动作时，所产生的成本与动作的平方成正比。这意味着，动作的大小对成本的影响是非线性的，而且随着动作的增加而增加。
+# 引入影响成本模型可以更真实地模拟金融市场中的交易成本，并且有助于智能体学习更优化的交易策略，考虑到成本的影响。
 # # Squared impact model
 
 # We consider the following cost model incorporating a squared impact cost:
@@ -592,7 +598,7 @@ T = 5000
 LAMBD = 0.3
 PSI = 1
 # -
-#初始化一个Environment
+# 初始化一个Environment
 env = Environment(
     sigma=SIGMA,
     theta=THETA,
@@ -629,7 +635,7 @@ FC2_UNITS_CRITIC = 16
 
 # +
 # %%time
-#设置squared_cost 路径
+# 设置squared_cost 路径
 path = "Experiment_squared_cost/"
 if not os.path.exists(path + "weights/"):
     os.makedirs(path + "weights/")

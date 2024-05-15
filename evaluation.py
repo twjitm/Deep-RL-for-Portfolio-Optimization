@@ -295,6 +295,17 @@ def plot_function(
     signal_ones_neg = torch.tensor(#信号量为-1
         np.vstack((range_values, -pi * np.ones(len(range_values)))).T, dtype=torch.float
     )
+
+    signal1 = optimal_f_vec(#-pi 位置的最优函数
+        signal_ones_neg[:, 0].numpy(), -pi, lambd=lambd, psi=psi, cost=env.cost
+    )
+    signal2 = optimal_f_vec( #0 位置的最优函数
+        signal_zeros[:, 0].numpy(), 0, lambd=lambd, psi=psi, cost=env.cost
+    )
+    signal3 = optimal_f_vec(#pi 位置的最优函数
+        signal_ones_pos[:, 0].numpy(), pi, lambd=lambd, psi=psi, cost=env.cost
+    )
+
     if env.squared_risk:#如果是平方风险
         optimal1 = optimal_f_vec(#-pi 位置的最优函数
             signal_ones_neg[:, 0].numpy(), -pi, lambd=lambd, psi=psi, cost=env.cost
@@ -347,6 +358,7 @@ def plot_function(
             plt.subplot(len(models_keys), 3, i * 3 + 1)
             plt.plot(signal_ones_neg[:, 0].numpy(), model1, label="model")
             plt.plot(signal_ones_neg[:, 0].numpy(), optimal1, label="optimal")
+            plt.plot(signal_zeros[:, 0].numpy(), signal1, label="signal")
 
             plt.xlim(-4, 4)
             plt.ylim(-4, 4)
@@ -356,6 +368,7 @@ def plot_function(
             plt.subplot(len(models_keys), 3, i * 3 + 2)
             plt.plot(signal_zeros[:, 0].numpy(), model2, label="model")
             plt.plot(signal_zeros[:, 0].numpy(), optimal2, label="optimal")
+            plt.plot(signal_zeros[:, 0].numpy(), signal2, label="signal")
 
             plt.xlim(-4, 4)
             plt.ylim(-4, 4)
@@ -365,6 +378,7 @@ def plot_function(
             plt.subplot(len(models_keys), 3, i * 3 + 3)
             plt.plot(signal_ones_pos[:, 0].numpy(), model3, label="model")
             plt.plot(signal_ones_pos[:, 0].numpy(), optimal3, label="optimal")
+            plt.plot(signal_zeros[:, 0].numpy(), signal3, label="signal")
 
             plt.xlim(-4, 4)
             plt.ylim(-4, 4)
